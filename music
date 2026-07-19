@@ -482,7 +482,7 @@ local function createMainGUI()
         playPlaylistButton.BackgroundColor3 = Color3.fromRGB(200, 120, 50)
         playPlaylistButton.Position = UDim2.new(0, 2, 0, 2)
         playPlaylistButton.Size = UDim2.new(0.48, -3, 0, 25)
-        playPlaylistButton.Text = "Start Playlist"
+        playPlaylistButton.Text = "Broken Button"
         playPlaylistButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         playPlaylistButton.TextSize = 9
         playPlaylistButton.Font = Enum.Font.GothamBold
