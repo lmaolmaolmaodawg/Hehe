@@ -1,0 +1,776 @@
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+
+local function createMainGUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "AudioPlayerGUI"
+    screenGui.Parent = Player.PlayerGui
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.ResetOnSpawn = false
+
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Parent = screenGui
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    mainFrame.BackgroundTransparency = 0.05
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Position = UDim2.new(0.5, -100, 0.5, -175)
+    mainFrame.Size = UDim2.new(0, 200, 0, 350)
+    mainFrame.ClipsDescendants = true
+    
+    local corner = Instance.new("UICorner")
+    corner.Parent = mainFrame
+    corner.CornerRadius = UDim.new(0, 8)
+
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Parent = mainFrame
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    titleBar.Size = UDim2.new(1, 0, 0, 25)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.Parent = titleBar
+    titleCorner.CornerRadius = UDim.new(0, 8)
+
+    local titleText = Instance.new("TextLabel")
+    titleText.Parent = titleBar
+    titleText.BackgroundTransparency = 1
+    titleText.Position = UDim2.new(0, 5, 0, 0)
+    titleText.Size = UDim2.new(1, -25, 1, 0)
+    titleText.Text = "Brandon Audio Player (MORE SOON)"
+    titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleText.TextSize = 12
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Font = Enum.Font.GothamBold
+
+    local closeButton = Instance.new("TextButton")
+    closeButton.Parent = titleBar
+    closeButton.BackgroundTransparency = 1
+    closeButton.Position = UDim2.new(1, -20, 0, 2)
+    closeButton.Size = UDim2.new(0, 18, 0, 20)
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.fromRGB(255, 80, 80)
+    closeButton.TextSize = 12
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.MouseButton1Click:Connect(function()
+        if currentSound then
+            currentSound:Stop()
+            currentSound:Destroy()
+            currentSound = nil
+        end
+        screenGui:Destroy()
+    end)
+
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Name = "ContentFrame"
+    contentFrame.Parent = mainFrame
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Position = UDim2.new(0, 3, 0, 30)
+    contentFrame.Size = UDim2.new(1, -6, 1, -35)
+    contentFrame.ScrollBarThickness = 2
+    contentFrame.CanvasSize = UDim2.new(0, 0, 0, 480)
+
+    local playlist = {
+        {id = "134763052215450", name = "I Wish I Knew"},
+        {id = "85836074611159", name = "Lil Uzi Vert"},
+        {id = "116675448257664", name = "Juice Wrld"},
+        {id = "116374867043780", name = "Wait A Minute"}
+    }
+
+    local currentSound = nil
+    local isPlaying = false
+    local isPaused = false
+    local isPlaylistLooping = false
+    local currentPlaylistIndex = 1
+    local currentVolume = 0.5
+    local soundIdLoopActive = false
+    local currentSoundId = ""
+    local playlistActive = false
+    local currentPlayButton = nil
+
+    local function createNotify(text)
+        local notifyGui = Instance.new("ScreenGui")
+        notifyGui.Name = "NotifyGUI"
+        notifyGui.Parent = Player.PlayerGui
+        notifyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        notifyGui.ResetOnSpawn = false
+
+        local notifyFrame = Instance.new("Frame")
+        notifyFrame.Parent = notifyGui
+        notifyFrame.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+        notifyFrame.BackgroundTransparency = 0.1
+        notifyFrame.BorderSizePixel = 0
+        notifyFrame.Position = UDim2.new(0, 5, 1, -50)
+        notifyFrame.Size = UDim2.new(0, 180, 0, 35)
+        notifyFrame.ClipsDescendants = true
+
+        local notifyCorner = Instance.new("UICorner")
+        notifyCorner.Parent = notifyFrame
+        notifyCorner.CornerRadius = UDim.new(0, 6)
+
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = notifyFrame
+        textLabel.BackgroundTransparency = 1
+        textLabel.Position = UDim2.new(0, 10, 0, 0)
+        textLabel.Size = UDim2.new(1, -10, 1, 0)
+        textLabel.Text = text
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextSize = 11
+        textLabel.TextWrapped = true
+        textLabel.TextXAlignment = Enum.TextXAlignment.Left
+        textLabel.Font = Enum.Font.Gotham
+
+        notifyFrame:TweenPosition(UDim2.new(0, 5, 1, -55), "Out", "Quad", 0.2, true)
+
+        task.delay(2.5, function()
+            notifyFrame:TweenPosition(UDim2.new(0, 5, 1, 10), "In", "Quad", 0.2, true)
+            task.wait(0.3)
+            notifyGui:Destroy()
+        end)
+
+        return notifyGui
+    end
+
+    local function updateVolume()
+        if currentSound then
+            currentSound.Volume = currentVolume
+        end
+    end
+
+    local function stopCurrentSound()
+        if currentSound then
+            currentSound:Stop()
+            currentSound:Destroy()
+            currentSound = nil
+            isPlaying = false
+            isPaused = false
+            playlistActive = false
+            currentSoundId = ""
+            nowPlayingLabel.Text = "Now Playing: None"
+            if currentPlayButton then
+                currentPlayButton.Text = "Play"
+            end
+            currentPlayButton = nil
+        end
+    end
+
+    local function pauseCurrentSound()
+        if currentSound and isPlaying then
+            currentSound:Pause()
+            isPlaying = false
+            isPaused = true
+            if currentPlayButton then
+                currentPlayButton.Text = "Resume"
+            end
+        end
+    end
+
+    local function resumeCurrentSound()
+        if currentSound and isPaused then
+            currentSound:Resume()
+            isPlaying = true
+            isPaused = false
+            if currentPlayButton then
+                currentPlayButton.Text = "Pause"
+            end
+        end
+    end
+
+    local function playSoundById(id, loop, playButton)
+        if currentSound and currentSoundId == id and isPlaying then
+            pauseCurrentSound()
+            return
+        end
+        
+        if currentSound and currentSoundId == id and isPaused then
+            resumeCurrentSound()
+            return
+        end
+
+        stopCurrentSound()
+
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://" .. id
+        sound.Parent = SoundService
+        sound.Volume = currentVolume
+        sound.Looped = loop or false
+
+        sound:Play()
+        currentSound = sound
+        isPlaying = true
+        isPaused = false
+        currentSoundId = id
+        currentPlayButton = playButton
+
+        if playButton then
+            playButton.Text = "Pause"
+        end
+
+        sound.Stopped:Connect(function()
+            isPlaying = false
+            isPaused = false
+            if currentPlayButton then
+                currentPlayButton.Text = "Play"
+            end
+            if loop then
+                sound:Play()
+            elseif playlistActive and isPlaylistLooping then
+                playNextInPlaylist()
+            end
+        end)
+
+        return sound
+    end
+
+    local function playNextInPlaylist()
+        if not playlistActive then return end
+        
+        currentPlaylistIndex = currentPlaylistIndex + 1
+        if currentPlaylistIndex > #playlist then
+            if isPlaylistLooping then
+                currentPlaylistIndex = 1
+            else
+                playlistActive = false
+                nowPlayingLabel.Text = "Now Playing: None"
+                return
+            end
+        end
+        
+        local song = playlist[currentPlaylistIndex]
+        nowPlayingLabel.Text = "Now Playing: " .. song.name
+        playSoundById(song.id, false)
+        createNotify("Playing: " .. song.name)
+    end
+
+    local function startPlaylist()
+        stopCurrentSound()
+        currentPlaylistIndex = 1
+        playlistActive = true
+        isPlaylistLooping = false
+        loopPlaylistButton.Text = "Loop"
+        loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+        local song = playlist[1]
+        nowPlayingLabel.Text = "Now Playing: " .. song.name
+        playSoundById(song.id, false)
+        createNotify("Playlist: " .. song.name)
+    end
+
+    local function createButtons()
+        local yOffset = 0
+
+        local nowPlayingLabel = Instance.new("TextLabel")
+        nowPlayingLabel.Parent = contentFrame
+        nowPlayingLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        nowPlayingLabel.Position = UDim2.new(0, 0, 0, yOffset)
+        nowPlayingLabel.Size = UDim2.new(1, 0, 0, 18)
+        nowPlayingLabel.Text = "Now Playing: None"
+        nowPlayingLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        nowPlayingLabel.TextSize = 10
+        nowPlayingLabel.Font = Enum.Font.GothamBold
+        
+        local npCorner = Instance.new("UICorner")
+        npCorner.Parent = nowPlayingLabel
+        npCorner.CornerRadius = UDim.new(0, 3)
+
+        yOffset = yOffset + 22
+
+        local volumeFrame = Instance.new("Frame")
+        volumeFrame.Parent = contentFrame
+        volumeFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        volumeFrame.Position = UDim2.new(0, 0, 0, yOffset)
+        volumeFrame.Size = UDim2.new(1, 0, 0, 22)
+        
+        local volCorner = Instance.new("UICorner")
+        volCorner.Parent = volumeFrame
+        volCorner.CornerRadius = UDim.new(0, 3)
+
+        local volValue = Instance.new("TextLabel")
+        volValue.Parent = volumeFrame
+        volValue.BackgroundTransparency = 1
+        volValue.Position = UDim2.new(1, -30, 0, 0)
+        volValue.Size = UDim2.new(0, 25, 1, 0)
+        volValue.Text = "50%"
+        volValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+        volValue.TextSize = 9
+        volValue.Font = Enum.Font.Gotham
+
+        local volSlider = Instance.new("Frame")
+        volSlider.Parent = volumeFrame
+        volSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        volSlider.Position = UDim2.new(0, 5, 0, 8)
+        volSlider.Size = UDim2.new(1, -40, 0, 6)
+        
+        local sliderCorner = Instance.new("UICorner")
+        sliderCorner.Parent = volSlider
+        sliderCorner.CornerRadius = UDim.new(0, 3)
+
+        local volFill = Instance.new("Frame")
+        volFill.Parent = volSlider
+        volFill.BackgroundColor3 = Color3.fromRGB(255, 200, 100)
+        volFill.Size = UDim2.new(0.5, 0, 1, 0)
+        
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.Parent = volFill
+        fillCorner.CornerRadius = UDim.new(0, 3)
+
+        local sliderButton = Instance.new("TextButton")
+        sliderButton.Parent = volSlider
+        sliderButton.BackgroundColor3 = Color3.fromRGB(255, 200, 100)
+        sliderButton.Position = UDim2.new(0.5, -5, 0, -3)
+        sliderButton.Size = UDim2.new(0, 10, 0, 12)
+        sliderButton.Text = ""
+        sliderButton.AutoButtonColor = false
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.Parent = sliderButton
+        btnCorner.CornerRadius = UDim.new(1, 0)
+
+        local function updateVolumeFromSlider()
+            local sliderPos = sliderButton.Position.X.Scale
+            currentVolume = math.clamp(sliderPos, 0, 1)
+            volValue.Text = math.round(currentVolume * 100) .. "%"
+            volFill.Size = UDim2.new(currentVolume, 0, 1, 0)
+            updateVolume()
+        end
+
+        sliderButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local connection
+                connection = UserInputService.InputChanged:Connect(function(inputChanged)
+                    if inputChanged.UserInputType == Enum.UserInputType.MouseMovement or inputChanged.UserInputType == Enum.UserInputType.Touch then
+                        local sliderSize = volSlider.AbsoluteSize.X
+                        local mousePos = inputChanged.Position.X - volSlider.AbsolutePosition.X
+                        local newPos = math.clamp(mousePos / sliderSize, 0, 1)
+                        sliderButton.Position = UDim2.new(newPos, -5, 0, -3)
+                        updateVolumeFromSlider()
+                    end
+                end)
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        connection:Disconnect()
+                    end
+                end)
+            end
+        end)
+
+        yOffset = yOffset + 26
+
+        for i, song in ipairs(playlist) do
+            local songFrame = Instance.new("Frame")
+            songFrame.Parent = contentFrame
+            songFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            songFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            songFrame.Size = UDim2.new(1, 0, 0, 28)
+            
+            local songCorner = Instance.new("UICorner")
+            songCorner.Parent = songFrame
+            songCorner.CornerRadius = UDim.new(0, 3)
+
+            local playBtn = Instance.new("TextButton")
+            playBtn.Parent = songFrame
+            playBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+            playBtn.Position = UDim2.new(0, 2, 0, 2)
+            playBtn.Size = UDim2.new(0, 40, 0, 24)
+            playBtn.Text = "Play"
+            playBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
+            playBtn.TextSize = 10
+            playBtn.Font = Enum.Font.GothamBold
+            playBtn.AutoButtonColor = false
+            
+            local playCorner = Instance.new("UICorner")
+            playCorner.Parent = playBtn
+            playCorner.CornerRadius = UDim.new(0, 3)
+
+            local songLabel = Instance.new("TextLabel")
+            songLabel.Parent = songFrame
+            songLabel.BackgroundTransparency = 1
+            songLabel.Position = UDim2.new(0, 48, 0, 2)
+            songLabel.Size = UDim2.new(0.6, 0, 0, 24)
+            songLabel.Text = song.name
+            songLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            songLabel.TextSize = 10
+            songLabel.TextXAlignment = Enum.TextXAlignment.Left
+            songLabel.Font = Enum.Font.Gotham
+
+            local loopBtn = Instance.new("TextButton")
+            loopBtn.Parent = songFrame
+            loopBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+            loopBtn.Position = UDim2.new(1, -45, 0, 2)
+            loopBtn.Size = UDim2.new(0, 40, 0, 24)
+            loopBtn.Text = "Loop"
+            loopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            loopBtn.TextSize = 9
+            loopBtn.Font = Enum.Font.GothamBold
+            loopBtn.AutoButtonColor = false
+            
+            local loopCorner = Instance.new("UICorner")
+            loopCorner.Parent = loopBtn
+            loopCorner.CornerRadius = UDim.new(0, 3)
+
+            local isSongLooping = false
+
+            playBtn.MouseButton1Click:Connect(function()
+                if currentSound and currentSoundId == song.id then
+                    if isPaused then
+                        resumeCurrentSound()
+                        playBtn.Text = "Pause"
+                        return
+                    elseif isPlaying then
+                        pauseCurrentSound()
+                        playBtn.Text = "Resume"
+                        return
+                    end
+                end
+                
+                playlistActive = false
+                nowPlayingLabel.Text = "Now Playing: " .. song.name
+                playSoundById(song.id, false, playBtn)
+                createNotify("Playing: " .. song.name)
+                
+                if isPlaylistLooping then
+                    isPlaylistLooping = false
+                    loopPlaylistButton.Text = "Loop"
+                    loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+                end
+            end)
+
+            loopBtn.MouseButton1Click:Connect(function()
+                isSongLooping = not isSongLooping
+                loopBtn.BackgroundColor3 = isSongLooping and Color3.fromRGB(0, 150, 40) or Color3.fromRGB(180, 70, 25)
+                if isSongLooping then
+                    playlistActive = false
+                    nowPlayingLabel.Text = "Now Playing (Loop): " .. song.name
+                    playSoundById(song.id, true, playBtn)
+                    createNotify("Looping: " .. song.name)
+                else
+                    if currentSound and currentSoundId == song.id then
+                        stopCurrentSound()
+                        playBtn.Text = "Play"
+                        nowPlayingLabel.Text = "Now Playing: None"
+                    end
+                end
+            end)
+
+            yOffset = yOffset + 32
+        end
+
+        local controlFrame = Instance.new("Frame")
+        controlFrame.Parent = contentFrame
+        controlFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        controlFrame.Position = UDim2.new(0, 0, 0, yOffset)
+        controlFrame.Size = UDim2.new(1, 0, 0, 60)
+        
+        local controlCorner = Instance.new("UICorner")
+        controlCorner.Parent = controlFrame
+        controlCorner.CornerRadius = UDim.new(0, 3)
+
+        local playPlaylistButton = Instance.new("TextButton")
+        playPlaylistButton.Parent = controlFrame
+        playPlaylistButton.BackgroundColor3 = Color3.fromRGB(200, 120, 50)
+        playPlaylistButton.Position = UDim2.new(0, 2, 0, 2)
+        playPlaylistButton.Size = UDim2.new(0.48, -3, 0, 25)
+        playPlaylistButton.Text = "BROKEN BUTTON"
+        playPlaylistButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        playPlaylistButton.TextSize = 9
+        playPlaylistButton.Font = Enum.Font.GothamBold
+        playPlaylistButton.AutoButtonColor = false
+        
+        local pCorner = Instance.new("UICorner")
+        pCorner.Parent = playPlaylistButton
+        pCorner.CornerRadius = UDim.new(0, 3)
+
+        local loopPlaylistButton = Instance.new("TextButton")
+        loopPlaylistButton.Parent = controlFrame
+        loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+        loopPlaylistButton.Position = UDim2.new(0.50, 2, 0, 2)
+        loopPlaylistButton.Size = UDim2.new(0.48, -3, 0, 25)
+        loopPlaylistButton.Text = "Loop"
+        loopPlaylistButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        loopPlaylistButton.TextSize = 10
+        loopPlaylistButton.Font = Enum.Font.GothamBold
+        loopPlaylistButton.AutoButtonColor = false
+        
+        local lpCorner = Instance.new("UICorner")
+        lpCorner.Parent = loopPlaylistButton
+        lpCorner.CornerRadius = UDim.new(0, 3)
+
+        local stopCurrentBtn = Instance.new("TextButton")
+        stopCurrentBtn.Parent = controlFrame
+        stopCurrentBtn.BackgroundColor3 = Color3.fromRGB(170, 45, 45)
+        stopCurrentBtn.Position = UDim2.new(0, 2, 0, 32)
+        stopCurrentBtn.Size = UDim2.new(0.48, -3, 0, 25)
+        stopCurrentBtn.Text = "Stop Song"
+        stopCurrentBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        stopCurrentBtn.TextSize = 10
+        stopCurrentBtn.Font = Enum.Font.GothamBold
+        stopCurrentBtn.AutoButtonColor = false
+        
+        local sCorner = Instance.new("UICorner")
+        sCorner.Parent = stopCurrentBtn
+        sCorner.CornerRadius = UDim.new(0, 3)
+
+        local stopPlaylistBtn = Instance.new("TextButton")
+        stopPlaylistBtn.Parent = controlFrame
+        stopPlaylistBtn.BackgroundColor3 = Color3.fromRGB(140, 35, 35)
+        stopPlaylistBtn.Position = UDim2.new(0.50, 2, 0, 32)
+        stopPlaylistBtn.Size = UDim2.new(0.48, -3, 0, 25)
+        stopPlaylistBtn.Text = "Stop Playlist"
+        stopPlaylistBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        stopPlaylistBtn.TextSize = 10
+        stopPlaylistBtn.Font = Enum.Font.GothamBold
+        stopPlaylistBtn.AutoButtonColor = false
+        
+        local spCorner = Instance.new("UICorner")
+        spCorner.Parent = stopPlaylistBtn
+        spCorner.CornerRadius = UDim.new(0, 3)
+
+        playPlaylistButton.MouseButton1Click:Connect(function()
+            startPlaylist()
+        end)
+
+        loopPlaylistButton.MouseButton1Click:Connect(function()
+            if not playlistActive then
+                startPlaylist()
+                task.wait(0.1)
+            end
+            isPlaylistLooping = not isPlaylistLooping
+            loopPlaylistButton.Text = isPlaylistLooping and "Loop ON" or "Loop"
+            loopPlaylistButton.BackgroundColor3 = isPlaylistLooping and Color3.fromRGB(0, 150, 40) or Color3.fromRGB(180, 70, 25)
+            
+            if isPlaylistLooping and not currentSound then
+                currentPlaylistIndex = 1
+                local song = playlist[1]
+                nowPlayingLabel.Text = "Now Playing: " .. song.name
+                playSoundById(song.id, false)
+                createNotify("Looping: " .. song.name)
+            end
+        end)
+
+        stopCurrentBtn.MouseButton1Click:Connect(function()
+            stopCurrentSound()
+            playlistActive = false
+            createNotify("Stopped song")
+        end)
+
+        stopPlaylistBtn.MouseButton1Click:Connect(function()
+            stopCurrentSound()
+            playlistActive = false
+            isPlaylistLooping = false
+            loopPlaylistButton.Text = "Loop"
+            loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+            currentPlaylistIndex = 1
+            createNotify("Stopped playlist")
+        end)
+
+        yOffset = yOffset + 65
+
+        local idFrame = Instance.new("Frame")
+        idFrame.Parent = contentFrame
+        idFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        idFrame.Position = UDim2.new(0, 0, 0, yOffset)
+        idFrame.Size = UDim2.new(1, 0, 0, 60)
+        
+        local idCorner = Instance.new("UICorner")
+        idCorner.Parent = idFrame
+        idCorner.CornerRadius = UDim.new(0, 3)
+
+        local idLabel = Instance.new("TextLabel")
+        idLabel.Parent = idFrame
+        idLabel.BackgroundTransparency = 1
+        idLabel.Position = UDim2.new(0, 4, 0, 2)
+        idLabel.Size = UDim2.new(1, 0, 0, 14)
+        idLabel.Text = "Song ID Player"
+        idLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        idLabel.TextSize = 10
+        idLabel.Font = Enum.Font.GothamBold
+        idLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+        local idInput = Instance.new("TextBox")
+        idInput.Parent = idFrame
+        idInput.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+        idInput.Position = UDim2.new(0, 4, 0, 18)
+        idInput.Size = UDim2.new(1, -8, 0, 16)
+        idInput.PlaceholderText = "ID..."
+        idInput.Text = ""
+        idInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+        idInput.TextSize = 10
+        idInput.Font = Enum.Font.Gotham
+        
+        local idInputCorner = Instance.new("UICorner")
+        idInputCorner.Parent = idInput
+        idInputCorner.CornerRadius = UDim.new(0, 3)
+
+        local idButtons = Instance.new("Frame")
+        idButtons.Parent = idFrame
+        idButtons.BackgroundTransparency = 1
+        idButtons.Position = UDim2.new(0, 4, 0, 38)
+        idButtons.Size = UDim2.new(1, -8, 0, 18)
+
+        local playOnceBtn = Instance.new("TextButton")
+        playOnceBtn.Parent = idButtons
+        playOnceBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+        playOnceBtn.Position = UDim2.new(0, 0, 0, 0)
+        playOnceBtn.Size = UDim2.new(0.32, -2, 1, 0)
+        playOnceBtn.Text = "Play"
+        playOnceBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        playOnceBtn.TextSize = 9
+        playOnceBtn.Font = Enum.Font.Gotham
+        playOnceBtn.AutoButtonColor = false
+        
+        local btnCorner3 = Instance.new("UICorner")
+        btnCorner3.Parent = playOnceBtn
+        btnCorner3.CornerRadius = UDim.new(0, 3)
+
+        local loopIdBtn = Instance.new("TextButton")
+        loopIdBtn.Parent = idButtons
+        loopIdBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+        loopIdBtn.Position = UDim2.new(0.34, 0, 0, 0)
+        loopIdBtn.Size = UDim2.new(0.32, -2, 1, 0)
+        loopIdBtn.Text = "Loop"
+        loopIdBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        loopIdBtn.TextSize = 9
+        loopIdBtn.Font = Enum.Font.Gotham
+        loopIdBtn.AutoButtonColor = false
+        
+        local btnCorner4 = Instance.new("UICorner")
+        btnCorner4.Parent = loopIdBtn
+        btnCorner4.CornerRadius = UDim.new(0, 3)
+
+        local stopIdBtn = Instance.new("TextButton")
+        stopIdBtn.Parent = idButtons
+        stopIdBtn.BackgroundColor3 = Color3.fromRGB(170, 45, 45)
+        stopIdBtn.Position = UDim2.new(0.68, 0, 0, 0)
+        stopIdBtn.Size = UDim2.new(0.32, -2, 1, 0)
+        stopIdBtn.Text = "Stop"
+        stopIdBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        stopIdBtn.TextSize = 9
+        stopIdBtn.Font = Enum.Font.Gotham
+        stopIdBtn.AutoButtonColor = false
+        
+        local btnCorner5 = Instance.new("UICorner")
+        btnCorner5.Parent = stopIdBtn
+        btnCorner5.CornerRadius = UDim.new(0, 3)
+
+        playOnceBtn.MouseButton1Click:Connect(function()
+            if idInput.Text ~= "" then
+                if currentSound and currentSoundId == idInput.Text then
+                    if isPaused then
+                        resumeCurrentSound()
+                        playOnceBtn.Text = "Pause"
+                        return
+                    elseif isPlaying then
+                        pauseCurrentSound()
+                        playOnceBtn.Text = "Resume"
+                        return
+                    end
+                end
+                playlistActive = false
+                nowPlayingLabel.Text = "Now Playing (ID): " .. idInput.Text
+                playSoundById(idInput.Text, false, playOnceBtn)
+                createNotify("Playing ID: " .. idInput.Text)
+            end
+        end)
+
+        loopIdBtn.MouseButton1Click:Connect(function()
+            if idInput.Text ~= "" then
+                soundIdLoopActive = not soundIdLoopActive
+                loopIdBtn.BackgroundColor3 = soundIdLoopActive and Color3.fromRGB(0, 150, 40) or Color3.fromRGB(180, 70, 25)
+                loopIdBtn.Text = soundIdLoopActive and "ON" or "Loop"
+                if soundIdLoopActive then
+                    playlistActive = false
+                    nowPlayingLabel.Text = "Now Playing (Loop ID)"
+                    playSoundById(idInput.Text, true, playOnceBtn)
+                    createNotify("Looping ID: " .. idInput.Text)
+                else
+                    if currentSound and currentSoundId == idInput.Text then
+                        stopCurrentSound()
+                        playOnceBtn.Text = "Play"
+                        nowPlayingLabel.Text = "Now Playing: None"
+                    end
+                end
+            end
+        end)
+
+        stopIdBtn.MouseButton1Click:Connect(function()
+            stopCurrentSound()
+            soundIdLoopActive = false
+            loopIdBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+            loopIdBtn.Text = "Loop"
+            playOnceBtn.Text = "Play"
+            createNotify("Stopped ID")
+        end)
+
+        yOffset = yOffset + 65
+
+        local noteFrame = Instance.new("Frame")
+        noteFrame.Parent = contentFrame
+        noteFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+        noteFrame.Position = UDim2.new(0, 0, 0, yOffset)
+        noteFrame.Size = UDim2.new(1, 0, 0, 40)
+        
+        local noteCorner = Instance.new("UICorner")
+        noteCorner.Parent = noteFrame
+        noteCorner.CornerRadius = UDim.new(0, 3)
+
+        local noteLabel = Instance.new("TextLabel")
+        noteLabel.Parent = noteFrame
+        noteLabel.BackgroundTransparency = 1
+        noteLabel.Position = UDim2.new(0, 4, 0, 2)
+        noteLabel.Size = UDim2.new(1, -8, 0, 36)
+        noteLabel.Text = "Notes: Once script is executed it auto starts playlist, so click Stop Playlist to stop it if you wanna!"
+        noteLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+        noteLabel.TextSize = 8
+        noteLabel.TextWrapped = true
+        noteLabel.Font = Enum.Font.Gotham
+        noteLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+        contentFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset + 45)
+    end
+
+    createButtons()
+
+    local dragging = false
+    local dragStart, startPos
+
+    local function startDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if input.Position.Y >= mainFrame.AbsolutePosition.Y and input.Position.Y <= mainFrame.AbsolutePosition.Y + 25 then
+                dragging = true
+                dragStart = input.Position
+                startPos = mainFrame.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end
+    end
+
+    local function updateDrag(input)
+        if dragging then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end
+
+    UserInputService.InputBegan:Connect(startDrag)
+    UserInputService.InputChanged:Connect(updateDrag)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    task.wait(0.5)
+    startPlaylist()
+
+    return screenGui
+end
+
+createMainGUI()
