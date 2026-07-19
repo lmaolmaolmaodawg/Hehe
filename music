@@ -1,3 +1,4 @@
+-- new updated
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -20,7 +21,7 @@ local function createMainGUI()
     mainFrame.Position = UDim2.new(0.5, -100, 0.5, -175)
     mainFrame.Size = UDim2.new(0, 200, 0, 350)
     mainFrame.ClipsDescendants = true
-    
+
     local corner = Instance.new("UICorner")
     corner.Parent = mainFrame
     corner.CornerRadius = UDim.new(0, 8)
@@ -31,7 +32,7 @@ local function createMainGUI()
     titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     titleBar.Size = UDim2.new(1, 0, 0, 25)
     titleBar.Position = UDim2.new(0, 0, 0, 0)
-    
+
     local titleCorner = Instance.new("UICorner")
     titleCorner.Parent = titleBar
     titleCorner.CornerRadius = UDim.new(0, 8)
@@ -41,7 +42,7 @@ local function createMainGUI()
     titleText.BackgroundTransparency = 1
     titleText.Position = UDim2.new(0, 5, 0, 0)
     titleText.Size = UDim2.new(1, -25, 1, 0)
-    titleText.Text = "Brandon Audio Player (MORE SOON)"
+    titleText.Text = "Brandon Audio Player"
     titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleText.TextSize = 12
     titleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -91,6 +92,7 @@ local function createMainGUI()
     local currentSoundId = ""
     local playlistActive = false
     local currentPlayButton = nil
+    local loopPlaylistButton = nil -- Define the variable here
 
     local function createNotify(text)
         local notifyGui = Instance.new("ScreenGui")
@@ -150,7 +152,9 @@ local function createMainGUI()
             isPaused = false
             playlistActive = false
             currentSoundId = ""
-            nowPlayingLabel.Text = "Now Playing: None"
+            if nowPlayingLabel then
+                nowPlayingLabel.Text = "Now Playing: None"
+            end
             if currentPlayButton then
                 currentPlayButton.Text = "Play"
             end
@@ -185,7 +189,7 @@ local function createMainGUI()
             pauseCurrentSound()
             return
         end
-        
+
         if currentSound and currentSoundId == id and isPaused then
             resumeCurrentSound()
             return
@@ -228,7 +232,7 @@ local function createMainGUI()
 
     local function playNextInPlaylist()
         if not playlistActive then return end
-        
+
         currentPlaylistIndex = currentPlaylistIndex + 1
         if currentPlaylistIndex > #playlist then
             if isPlaylistLooping then
@@ -239,7 +243,7 @@ local function createMainGUI()
                 return
             end
         end
-        
+
         local song = playlist[currentPlaylistIndex]
         nowPlayingLabel.Text = "Now Playing: " .. song.name
         playSoundById(song.id, false)
@@ -250,13 +254,15 @@ local function createMainGUI()
         stopCurrentSound()
         currentPlaylistIndex = 1
         playlistActive = true
-        isPlaylistLooping = false
-        loopPlaylistButton.Text = "Loop"
-        loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+        isPlaylistLooping = true -- Set loop to true by default so it repeats
+        if loopPlaylistButton then
+            loopPlaylistButton.Text = "Loop ON"
+            loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(0, 150, 40)
+        end
         local song = playlist[1]
         nowPlayingLabel.Text = "Now Playing: " .. song.name
         playSoundById(song.id, false)
-        createNotify("Playlist: " .. song.name)
+        createNotify("Playlist Started: " .. song.name)
     end
 
     local function createButtons()
@@ -271,7 +277,7 @@ local function createMainGUI()
         nowPlayingLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
         nowPlayingLabel.TextSize = 10
         nowPlayingLabel.Font = Enum.Font.GothamBold
-        
+
         local npCorner = Instance.new("UICorner")
         npCorner.Parent = nowPlayingLabel
         npCorner.CornerRadius = UDim.new(0, 3)
@@ -283,7 +289,7 @@ local function createMainGUI()
         volumeFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         volumeFrame.Position = UDim2.new(0, 0, 0, yOffset)
         volumeFrame.Size = UDim2.new(1, 0, 0, 22)
-        
+
         local volCorner = Instance.new("UICorner")
         volCorner.Parent = volumeFrame
         volCorner.CornerRadius = UDim.new(0, 3)
@@ -303,7 +309,7 @@ local function createMainGUI()
         volSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
         volSlider.Position = UDim2.new(0, 5, 0, 8)
         volSlider.Size = UDim2.new(1, -40, 0, 6)
-        
+
         local sliderCorner = Instance.new("UICorner")
         sliderCorner.Parent = volSlider
         sliderCorner.CornerRadius = UDim.new(0, 3)
@@ -312,7 +318,7 @@ local function createMainGUI()
         volFill.Parent = volSlider
         volFill.BackgroundColor3 = Color3.fromRGB(255, 200, 100)
         volFill.Size = UDim2.new(0.5, 0, 1, 0)
-        
+
         local fillCorner = Instance.new("UICorner")
         fillCorner.Parent = volFill
         fillCorner.CornerRadius = UDim.new(0, 3)
@@ -324,7 +330,7 @@ local function createMainGUI()
         sliderButton.Size = UDim2.new(0, 10, 0, 12)
         sliderButton.Text = ""
         sliderButton.AutoButtonColor = false
-        
+
         local btnCorner = Instance.new("UICorner")
         btnCorner.Parent = sliderButton
         btnCorner.CornerRadius = UDim.new(1, 0)
@@ -349,7 +355,7 @@ local function createMainGUI()
                         updateVolumeFromSlider()
                     end
                 end)
-                
+
                 input.Changed:Connect(function()
                     if input.UserInputState == Enum.UserInputState.End then
                         connection:Disconnect()
@@ -366,7 +372,7 @@ local function createMainGUI()
             songFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             songFrame.Position = UDim2.new(0, 0, 0, yOffset)
             songFrame.Size = UDim2.new(1, 0, 0, 28)
-            
+
             local songCorner = Instance.new("UICorner")
             songCorner.Parent = songFrame
             songCorner.CornerRadius = UDim.new(0, 3)
@@ -381,7 +387,7 @@ local function createMainGUI()
             playBtn.TextSize = 10
             playBtn.Font = Enum.Font.GothamBold
             playBtn.AutoButtonColor = false
-            
+
             local playCorner = Instance.new("UICorner")
             playCorner.Parent = playBtn
             playCorner.CornerRadius = UDim.new(0, 3)
@@ -407,7 +413,7 @@ local function createMainGUI()
             loopBtn.TextSize = 9
             loopBtn.Font = Enum.Font.GothamBold
             loopBtn.AutoButtonColor = false
-            
+
             local loopCorner = Instance.new("UICorner")
             loopCorner.Parent = loopBtn
             loopCorner.CornerRadius = UDim.new(0, 3)
@@ -426,16 +432,18 @@ local function createMainGUI()
                         return
                     end
                 end
-                
+
                 playlistActive = false
                 nowPlayingLabel.Text = "Now Playing: " .. song.name
                 playSoundById(song.id, false, playBtn)
                 createNotify("Playing: " .. song.name)
-                
+
                 if isPlaylistLooping then
                     isPlaylistLooping = false
-                    loopPlaylistButton.Text = "Loop"
-                    loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+                    if loopPlaylistButton then
+                        loopPlaylistButton.Text = "Loop"
+                        loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+                    end
                 end
             end)
 
@@ -464,7 +472,7 @@ local function createMainGUI()
         controlFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         controlFrame.Position = UDim2.new(0, 0, 0, yOffset)
         controlFrame.Size = UDim2.new(1, 0, 0, 60)
-        
+
         local controlCorner = Instance.new("UICorner")
         controlCorner.Parent = controlFrame
         controlCorner.CornerRadius = UDim.new(0, 3)
@@ -474,17 +482,17 @@ local function createMainGUI()
         playPlaylistButton.BackgroundColor3 = Color3.fromRGB(200, 120, 50)
         playPlaylistButton.Position = UDim2.new(0, 2, 0, 2)
         playPlaylistButton.Size = UDim2.new(0.48, -3, 0, 25)
-        playPlaylistButton.Text = "BROKEN BUTTON"
+        playPlaylistButton.Text = "Start Playlist"
         playPlaylistButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         playPlaylistButton.TextSize = 9
         playPlaylistButton.Font = Enum.Font.GothamBold
         playPlaylistButton.AutoButtonColor = false
-        
+
         local pCorner = Instance.new("UICorner")
         pCorner.Parent = playPlaylistButton
         pCorner.CornerRadius = UDim.new(0, 3)
 
-        local loopPlaylistButton = Instance.new("TextButton")
+        loopPlaylistButton = Instance.new("TextButton")
         loopPlaylistButton.Parent = controlFrame
         loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
         loopPlaylistButton.Position = UDim2.new(0.50, 2, 0, 2)
@@ -494,7 +502,7 @@ local function createMainGUI()
         loopPlaylistButton.TextSize = 10
         loopPlaylistButton.Font = Enum.Font.GothamBold
         loopPlaylistButton.AutoButtonColor = false
-        
+
         local lpCorner = Instance.new("UICorner")
         lpCorner.Parent = loopPlaylistButton
         lpCorner.CornerRadius = UDim.new(0, 3)
@@ -509,7 +517,7 @@ local function createMainGUI()
         stopCurrentBtn.TextSize = 10
         stopCurrentBtn.Font = Enum.Font.GothamBold
         stopCurrentBtn.AutoButtonColor = false
-        
+
         local sCorner = Instance.new("UICorner")
         sCorner.Parent = stopCurrentBtn
         sCorner.CornerRadius = UDim.new(0, 3)
@@ -524,7 +532,7 @@ local function createMainGUI()
         stopPlaylistBtn.TextSize = 10
         stopPlaylistBtn.Font = Enum.Font.GothamBold
         stopPlaylistBtn.AutoButtonColor = false
-        
+
         local spCorner = Instance.new("UICorner")
         spCorner.Parent = stopPlaylistBtn
         spCorner.CornerRadius = UDim.new(0, 3)
@@ -541,7 +549,7 @@ local function createMainGUI()
             isPlaylistLooping = not isPlaylistLooping
             loopPlaylistButton.Text = isPlaylistLooping and "Loop ON" or "Loop"
             loopPlaylistButton.BackgroundColor3 = isPlaylistLooping and Color3.fromRGB(0, 150, 40) or Color3.fromRGB(180, 70, 25)
-            
+
             if isPlaylistLooping and not currentSound then
                 currentPlaylistIndex = 1
                 local song = playlist[1]
@@ -561,8 +569,10 @@ local function createMainGUI()
             stopCurrentSound()
             playlistActive = false
             isPlaylistLooping = false
-            loopPlaylistButton.Text = "Loop"
-            loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+            if loopPlaylistButton then
+                loopPlaylistButton.Text = "Loop"
+                loopPlaylistButton.BackgroundColor3 = Color3.fromRGB(180, 70, 25)
+            end
             currentPlaylistIndex = 1
             createNotify("Stopped playlist")
         end)
@@ -574,7 +584,7 @@ local function createMainGUI()
         idFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         idFrame.Position = UDim2.new(0, 0, 0, yOffset)
         idFrame.Size = UDim2.new(1, 0, 0, 60)
-        
+
         local idCorner = Instance.new("UICorner")
         idCorner.Parent = idFrame
         idCorner.CornerRadius = UDim.new(0, 3)
@@ -600,7 +610,7 @@ local function createMainGUI()
         idInput.TextColor3 = Color3.fromRGB(255, 255, 255)
         idInput.TextSize = 10
         idInput.Font = Enum.Font.Gotham
-        
+
         local idInputCorner = Instance.new("UICorner")
         idInputCorner.Parent = idInput
         idInputCorner.CornerRadius = UDim.new(0, 3)
@@ -621,7 +631,7 @@ local function createMainGUI()
         playOnceBtn.TextSize = 9
         playOnceBtn.Font = Enum.Font.Gotham
         playOnceBtn.AutoButtonColor = false
-        
+
         local btnCorner3 = Instance.new("UICorner")
         btnCorner3.Parent = playOnceBtn
         btnCorner3.CornerRadius = UDim.new(0, 3)
@@ -636,7 +646,7 @@ local function createMainGUI()
         loopIdBtn.TextSize = 9
         loopIdBtn.Font = Enum.Font.Gotham
         loopIdBtn.AutoButtonColor = false
-        
+
         local btnCorner4 = Instance.new("UICorner")
         btnCorner4.Parent = loopIdBtn
         btnCorner4.CornerRadius = UDim.new(0, 3)
@@ -651,7 +661,7 @@ local function createMainGUI()
         stopIdBtn.TextSize = 9
         stopIdBtn.Font = Enum.Font.Gotham
         stopIdBtn.AutoButtonColor = false
-        
+
         local btnCorner5 = Instance.new("UICorner")
         btnCorner5.Parent = stopIdBtn
         btnCorner5.CornerRadius = UDim.new(0, 3)
@@ -712,7 +722,7 @@ local function createMainGUI()
         noteFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         noteFrame.Position = UDim2.new(0, 0, 0, yOffset)
         noteFrame.Size = UDim2.new(1, 0, 0, 40)
-        
+
         local noteCorner = Instance.new("UICorner")
         noteCorner.Parent = noteFrame
         noteCorner.CornerRadius = UDim.new(0, 3)
